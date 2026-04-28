@@ -89,6 +89,28 @@ position: [0.05, 0.60, 1.30],
     year: 2010,
     sqft: '55,000 sq ft',
   },
+  {
+    id: 'ECS-building',
+    name: 'ECS Building',
+    shortName: 'ECS',
+   position: [1.82, 0.20, 0.98],
+    color: '#29d459',
+    description: 'This is where engineers are made.',
+    category: 'Academic',
+    year: 1980,
+    sqft: '50,000 sq ft',
+  },
+   {
+    id: 'Stadium-building',
+    name: 'Titan Stadium',
+    shortName: 'ST',
+   position: [-0.98, 0.65, -2.60],
+    color: '#f18912',
+    description: 'This is where titans are made.',
+    category: 'Academic',
+    year: 1980,
+    sqft: '50,000 sq ft',
+  }
 ];
 
 // Mock NFT data per building
