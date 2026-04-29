@@ -1,0 +1,309 @@
+.transfer-modal {
+  background: #0d1120;
+  border: 1px solid #29D4C5;
+  border-radius: 14px;
+  padding: 22px;
+  width: 380px;
+  max-width: 95vw;
+  position: relative;
+  box-shadow: 0 0 40px rgba(41, 212, 197, 0.12);
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.82);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  backdrop-filter: blur(6px);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 18px;
+}
+
+.modal-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #f0f4ff;
+  font-family: 'Space Mono', monospace;
+}
+
+.modal-close {
+  background: none;
+  border: 1px solid #2a3550;
+  color: #aaa;
+  border-radius: 6px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.modal-close:hover {
+  border-color: #FF4F6A;
+  color: #FF4F6A;
+}
+
+/* ── NFT Preview ─────────────────────────────────────────────────────────── */
+.transfer-preview {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  background: #0a0e1a;
+  border: 1px solid #1e2640;
+  border-radius: 10px;
+  padding: 12px;
+  margin-bottom: 18px;
+}
+
+.transfer-art {
+  width: 80px;
+  height: 80px;
+  border-radius: 8px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.transfer-art svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.transfer-nft-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.transfer-rarity {
+  font-size: 10px;
+  font-weight: 700;
+  font-family: 'Space Mono', monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 3px;
+}
+
+.transfer-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: #e0e8ff;
+  margin-bottom: 3px;
+}
+
+.transfer-id {
+  font-size: 10px;
+  color: #555;
+  font-family: 'Space Mono', monospace;
+}
+
+/* ── Address Input ───────────────────────────────────────────────────────── */
+.modal-field {
+  margin-bottom: 14px;
+}
+
+.field-label {
+  display: block;
+  font-size: 10px;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-family: 'Space Mono', monospace;
+  margin-bottom: 6px;
+}
+
+.address-input {
+  width: 100%;
+  background: #070a14;
+  border: 1px solid #2a3550;
+  color: #e0e8ff;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-family: 'Space Mono', monospace;
+  font-size: 12px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.address-input::placeholder {
+  color: #3a4560;
+}
+
+.address-input:focus {
+  border-color: #29D4C5;
+}
+
+.address-input.valid {
+  border-color: #00C896;
+}
+
+.address-input.invalid {
+  border-color: #FF4F6A;
+}
+
+.field-hint {
+  font-size: 10px;
+  color: #555;
+  margin-top: 5px;
+  font-family: 'Space Mono', monospace;
+}
+
+.demo-hint {
+  color: #aa8800;
+}
+
+/* ── Warning ─────────────────────────────────────────────────────────────── */
+.transfer-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  background: rgba(255, 184, 0, 0.08);
+  border: 1px solid rgba(255, 184, 0, 0.25);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 11px;
+  color: #ccaa44;
+  line-height: 1.5;
+  margin-bottom: 14px;
+}
+
+.transfer-warning strong {
+  color: #FFB800;
+}
+
+/* ── Confirm Checkbox ────────────────────────────────────────────────────── */
+.confirm-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: #889;
+  cursor: pointer;
+  margin-bottom: 14px;
+  user-select: none;
+}
+
+.confirm-check input[type="checkbox"] {
+  accent-color: #29D4C5;
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+/* ── Error ───────────────────────────────────────────────────────────────── */
+.modal-error {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 79, 106, 0.1);
+  border: 1px solid rgba(255, 79, 106, 0.3);
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 11px;
+  color: #FF4F6A;
+  margin-bottom: 14px;
+}
+
+/* ── Actions ─────────────────────────────────────────────────────────────── */
+.modal-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.btn-cancel {
+  flex: 1;
+  padding: 10px;
+  background: #0a0e1a;
+  border: 1px solid #2a3550;
+  color: #889;
+  border-radius: 8px;
+  font-family: 'Space Mono', monospace;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.btn-cancel:hover {
+  border-color: #555;
+  color: #aaa;
+}
+
+.btn-confirm {
+  flex: 2;
+  padding: 10px;
+  background: #9B5FFF;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-family: 'Space Mono', monospace;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.15s;
+}
+
+.btn-confirm.transfer {
+  background: #29D4C5;
+  color: #000;
+}
+
+.btn-confirm.transfer:hover:not(:disabled) {
+  background: #3ae8d8;
+  box-shadow: 0 0 16px rgba(41, 212, 197, 0.35);
+}
+
+.btn-confirm:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.btn-confirm.loading {
+  cursor: wait;
+}
+
+/* ── Done state ──────────────────────────────────────────────────────────── */
+.transfer-done {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 30px 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: #00C896;
+  font-family: 'Space Mono', monospace;
+}
+
+/* Spinner */
+.spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(0, 0, 0, 0.25);
+  border-top-color: #000;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

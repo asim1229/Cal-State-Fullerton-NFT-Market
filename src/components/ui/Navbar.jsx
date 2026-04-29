@@ -12,6 +12,7 @@ export default function Navbar() {
     searchQuery, setSearchQuery,
     filterCategory, setFilterCategory,
     setSelectedBuilding,
+    isGanache,
   } = useStore();
 
   const [searchOpen, setSearchOpen] = useState(false);
@@ -95,7 +96,7 @@ export default function Navbar() {
               className="wallet-badge"
               onClick={() => setWalletOpen(!walletOpen)}
             >
-              <div className="wallet-dot" />
+              <div className={`wallet-dot ${isGanache ? 'live' : ''}`} />
               <span className="wallet-address">{wallet.shortAddress}</span>
               <span className="wallet-balance">{parseFloat(walletBalance).toFixed(3)} ETH</span>
               <ChevronDown size={12} />
@@ -104,11 +105,18 @@ export default function Navbar() {
               <div className="wallet-dropdown glass">
                 <div className="wallet-info">
                   <div className="wallet-info-label">Connected Wallet</div>
-                  <div className="wallet-info-address">{wallet.address}</div>
+                  <div className="wallet-info-address mono-small">{wallet.address}</div>
                   <div className="wallet-info-balance">{walletBalance} ETH</div>
-                  {wallet.isDemo && (
-                    <div className="wallet-demo-badge">Demo Mode</div>
-                  )}
+                  <div className="wallet-chain-badge" style={{
+                    marginTop: 6, fontSize: 10, fontFamily: 'monospace',
+                    color: isGanache ? '#00C896' : '#FFB800',
+                    padding: '3px 8px', borderRadius: 4,
+                    background: isGanache ? 'rgba(0,200,150,0.1)' : 'rgba(255,184,0,0.1)',
+                    border: `1px solid ${isGanache ? 'rgba(0,200,150,0.3)' : 'rgba(255,184,0,0.3)'}`,
+                    display: 'inline-block',
+                  }}>
+                    {isGanache ? '🟢 Ganache Live' : wallet.isDemo ? '🟡 Demo Mode' : '🔵 Testnet'}
+                  </div>
                 </div>
                 <button className="wallet-disconnect" onClick={() => { disconnectWallet(); setWalletOpen(false); }}>
                   Disconnect

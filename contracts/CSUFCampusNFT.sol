@@ -5,17 +5,17 @@ import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import "@openzeppelin/contracts/utils/Counters.sol";
 
 /**
  * @title CSUFCampusNFT
- * @dev ERC-721 NFT contract tied to CSUF campus buildings
- * Each building has its own NFT collection identified by buildingId
+ * @dev ERC-721 NFT marketplace contract tied to CSUF campus buildings.
+ *      Supports mint, list, unlist, buy, and transferFrom (ERC-721 standard).
+ *      Works with Ganache local network for development.
  */
 contract CSUFCampusNFT is ERC721URIStorage, Ownable, ReentrancyGuard {
-    using Counters for Counters.Counter;
 
-    Counters.Counter private _tokenIds;
+    // Use plain uint256 instead of deprecated Counters library (OZ v5 compat)
+    uint256 private _tokenIdCounter;
 
     // Platform fee: 2.5%
     uint256 public constant PLATFORM_FEE_BPS = 250;
@@ -47,9 +47,10 @@ contract CSUFCampusNFT is ERC721URIStorage, Ownable, ReentrancyGuard {
     // tokenId => buildingId
     mapping(uint256 => string) public tokenBuilding;
 
-    // Accumulated fees for owner withdrawal
+    // Accumulated platform fees for owner withdrawal
     uint256 public accumulatedFees;
 
+    // ── Events ─────────────────────────────────────────────────────────────────
     event CollectionCreated(string buildingId, string name, uint256 maxSupply, uint256 mintPrice);
     event NFTMinted(uint256 indexed tokenId, address indexed to, string buildingId, string tokenURI);
     event NFTListed(uint256 indexed tokenId, address indexed seller, uint256 price);
@@ -57,12 +58,26 @@ contract CSUFCampusNFT is ERC721URIStorage, Ownable, ReentrancyGuard {
     event NFTSold(uint256 indexed tokenId, address indexed from, address indexed to, uint256 price);
     event FeesWithdrawn(address indexed to, uint256 amount);
 
-    constructor() ERC721("CSUF Campus NFT", "CSUFNFT") Ownable(msg.sender) {}
+    constructor() ERC721("CSUF Campus NFT", "CSUFNFT") Ownable(msg.sender) {
+        _tokenIdCounter = 0;
+    }
 
-    // ── Admin ──────────────────────────────────────────────────────────────────
+    // ── Internal helpers ───────────────────────────────────────────────────────
+
+    function _nextTokenId() internal returns (uint256) {
+        _tokenIdCounter += 1;
+        return _tokenIdCounter;
+    }
+
+    function totalMinted() external view returns (uint256) {
+        return _tokenIdCounter;
+    }
+
+    // ── Admin: Create collections ──────────────────────────────────────────────
 
     /**
-     * @dev Create an NFT collection for a campus building
+     * @dev Create an NFT collection for a campus building.
+     *      Called once per building by the deploy script.
      */
     function createCollection(
         string calldata buildingId,
@@ -79,25 +94,26 @@ contract CSUFCampusNFT is ERC721URIStorage, Ownable, ReentrancyGuard {
     // ── Minting ────────────────────────────────────────────────────────────────
 
     /**
-     * @dev Mint an NFT from a building's collection
-     * @param buildingId The campus building identifier
-     * @param uri IPFS URI to NFT metadata JSON
+     * @dev Mint an NFT from a building's collection.
+     *      Send at least mintPrice ETH with the call.
+     * @param buildingId  The campus building identifier (e.g. "pollak-library")
+     * @param uri         Token metadata URI (data URI or IPFS)
      */
-    function mint(string calldata buildingId, string calldata uri) external payable nonReentrant returns (uint256) {
+    function mint(string calldata buildingId, string calldata uri)
+        external payable nonReentrant returns (uint256)
+    {
         BuildingCollection storage col = collections[buildingId];
         require(col.active, "Collection not active");
         require(col.minted < col.maxSupply, "Max supply reached");
         require(msg.value >= col.mintPrice, "Insufficient payment");
 
-        _tokenIds.increment();
-        uint256 newId = _tokenIds.current();
-
+        uint256 newId = _nextTokenId();
         _safeMint(msg.sender, newId);
         _setTokenURI(newId, uri);
         tokenBuilding[newId] = buildingId;
         col.minted++;
 
-        // Refund excess
+        // Refund excess ETH
         if (msg.value > col.mintPrice) {
             payable(msg.sender).transfer(msg.value - col.mintPrice);
         }
@@ -110,16 +126,17 @@ contract CSUFCampusNFT is ERC721URIStorage, Ownable, ReentrancyGuard {
     // ── Marketplace ────────────────────────────────────────────────────────────
 
     /**
-     * @dev List an NFT for sale
-     * @param tokenId The NFT to list
-     * @param price Sale price in wei
+     * @dev List an NFT for sale.
+     *      Caller must first call approve(address(this), tokenId).
+     * @param tokenId  Token to list
+     * @param price    Sale price in wei
      */
     function listNFT(uint256 tokenId, uint256 price) external {
         require(ownerOf(tokenId) == msg.sender, "Not owner");
         require(price > 0, "Price must be > 0");
         require(!listings[tokenId].active, "Already listed");
 
-        // Escrow: transfer to contract
+        // Transfer NFT into escrow (contract holds it while listed)
         transferFrom(msg.sender, address(this), tokenId);
 
         listings[tokenId] = NFTListing({
@@ -134,7 +151,7 @@ contract CSUFCampusNFT is ERC721URIStorage, Ownable, ReentrancyGuard {
     }
 
     /**
-     * @dev Cancel a listing and reclaim the NFT
+     * @dev Cancel a listing and reclaim the NFT from escrow.
      */
     function unlistNFT(uint256 tokenId) external {
         NFTListing storage listing = listings[tokenId];
@@ -148,7 +165,8 @@ contract CSUFCampusNFT is ERC721URIStorage, Ownable, ReentrancyGuard {
     }
 
     /**
-     * @dev Buy a listed NFT
+     * @dev Buy a listed NFT.
+     *      Send at least listing.price ETH with the call.
      */
     function buyNFT(uint256 tokenId) external payable nonReentrant {
         NFTListing storage listing = listings[tokenId];
@@ -165,6 +183,7 @@ contract CSUFCampusNFT is ERC721URIStorage, Ownable, ReentrancyGuard {
         _transfer(address(this), msg.sender, tokenId);
         payable(listing.seller).transfer(sellerProceeds);
 
+        // Refund excess ETH
         if (msg.value > listing.price) {
             payable(msg.sender).transfer(msg.value - listing.price);
         }
@@ -182,10 +201,6 @@ contract CSUFCampusNFT is ERC721URIStorage, Ownable, ReentrancyGuard {
         return collections[buildingId];
     }
 
-    function totalMinted() external view returns (uint256) {
-        return _tokenIds.current();
-    }
-
     // ── Finance ────────────────────────────────────────────────────────────────
 
     function withdrawFees() external onlyOwner {
@@ -194,4 +209,6 @@ contract CSUFCampusNFT is ERC721URIStorage, Ownable, ReentrancyGuard {
         payable(owner()).transfer(amount);
         emit FeesWithdrawn(owner(), amount);
     }
+
+    receive() external payable {}
 }

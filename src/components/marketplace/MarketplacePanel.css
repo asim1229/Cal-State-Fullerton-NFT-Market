@@ -169,14 +169,124 @@
   font-family: var(--font-mono);
 }
 
+/* Chain status badge */
+.chain-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 20px 8px;
+  font-size: 10px;
+  font-family: var(--font-mono);
+  color: #667;
+}
+
+.chain-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.chain-dot.live {
+  background: #00C896;
+  box-shadow: 0 0 6px #00C896;
+  animation: pulse-green 2s infinite;
+}
+
+.chain-dot.demo {
+  background: #FFB800;
+  box-shadow: 0 0 6px rgba(255,184,0,0.5);
+}
+
+.chain-label { color: #889; }
+
+@keyframes pulse-green {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+/* Rarity filters + search */
+.panel-filters {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+}
+
+.rarity-filters {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.rarity-pill {
+  padding: 3px 9px;
+  border: 1px solid #2a3550;
+  background: transparent;
+  color: #667;
+  border-radius: 12px;
+  font-size: 10px;
+  font-family: var(--font-mono);
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.rarity-pill:hover {
+  border-color: #FF7900;
+  color: #FF7900;
+}
+
+.rarity-pill.active {
+  background: #FF7900;
+  border-color: #FF7900;
+  color: #000;
+  font-weight: 700;
+}
+
+.nft-search {
+  width: 100%;
+  background: #070a14;
+  border: 1px solid #2a3550;
+  color: #e0e8ff;
+  border-radius: 7px;
+  padding: 7px 11px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.nft-search::placeholder { color: #3a4560; }
+.nft-search:focus { border-color: #FF7900; }
+
 /* NFT grid */
 .panel-nfts {
   flex: 1;
   overflow-y: auto;
   padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-auto-rows: max-content;
+  gap: 10px;
+  align-items: start;
+}
+
+/* Custom scrollbar for NFT grid */
+.panel-nfts::-webkit-scrollbar {
+  width: 6px;
+}
+.panel-nfts::-webkit-scrollbar-track {
+  background: transparent;
+}
+.panel-nfts::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+}
+.panel-nfts::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
 }
 
 /* Empty state */
