@@ -1,0 +1,194 @@
+.auction-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(6px);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  animation: fadeIn 0.15s ease;
+}
+
+.auction-modal {
+  width: 100%;
+  max-width: 400px;
+  border-radius: 16px;
+  padding: 24px;
+  border: 1px solid rgba(255, 121, 0, 0.3);
+  box-shadow: 0 0 40px rgba(255, 121, 0, 0.2);
+  animation: slideUp 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes slideUp {
+  from { transform: translateY(24px) scale(0.97); opacity: 0; }
+  to   { transform: translateY(0) scale(1);       opacity: 1; }
+}
+
+/* Header */
+.am-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+.am-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 700;
+  color: #FF7900;
+}
+.am-close {
+  background: none;
+  border: 1px solid rgba(255,255,255,0.1);
+  color: #888;
+  border-radius: 6px;
+  padding: 4px 8px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.am-close:hover { color: #fff; border-color: rgba(255,255,255,0.3); }
+
+/* NFT Preview */
+.am-preview {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px;
+  padding: 12px;
+  margin-bottom: 20px;
+}
+.am-art {
+  width: 64px;
+  height: 64px;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+.am-nft-name  { font-size: 13px; font-weight: 600; color: #e8eeff; margin-bottom: 3px; }
+.am-nft-rarity { font-size: 11px; font-weight: 700; text-transform: uppercase; margin-bottom: 2px; }
+.am-nft-edition { font-size: 11px; color: #6B7A99; }
+
+/* Fields */
+.am-field   { margin-bottom: 16px; }
+.am-label   { display: block; font-size: 11px; color: #6B7A99; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px; }
+
+.am-input-wrap {
+  display: flex;
+  align-items: center;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 8px;
+  overflow: hidden;
+  transition: border-color 0.15s;
+}
+.am-input-wrap:focus-within { border-color: #FF7900; }
+.am-eth-symbol { padding: 0 12px; color: #FF7900; font-weight: 700; font-size: 15px; }
+.am-input {
+  flex: 1;
+  background: none;
+  border: none;
+  color: #e8eeff;
+  font-size: 16px;
+  font-weight: 600;
+  padding: 10px 12px 10px 0;
+  outline: none;
+  font-family: var(--font-mono);
+}
+.am-input::-webkit-inner-spin-button { display: none; }
+.am-hint { font-size: 11px; color: #555; margin-top: 5px; }
+
+/* Duration grid */
+.am-duration-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+}
+.am-duration-btn {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: #888;
+  border-radius: 7px;
+  padding: 7px 4px;
+  font-size: 10px;
+  font-family: var(--font-mono);
+  cursor: pointer;
+  transition: all 0.15s;
+  text-align: center;
+}
+.am-duration-btn:hover { border-color: rgba(255,121,0,0.4); color: #ccc; }
+.am-duration-btn.active {
+  background: rgba(255,121,0,0.15);
+  border-color: #FF7900;
+  color: #FF7900;
+  font-weight: 700;
+}
+
+/* Ends At */
+.am-ends-at {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #6B7A99;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin-bottom: 20px;
+}
+.am-ends-at strong { color: #c8d4ff; }
+
+/* Actions */
+.am-actions {
+  display: flex;
+  gap: 10px;
+}
+.am-cancel {
+  flex: 1;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: #888;
+  border-radius: 9px;
+  padding: 11px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.am-cancel:hover { color: #ccc; border-color: rgba(255,255,255,0.2); }
+
+.am-start {
+  flex: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  background: linear-gradient(135deg, #FF7900, #FF4F6A);
+  border: none;
+  color: #fff;
+  border-radius: 9px;
+  padding: 11px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.am-start:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 4px 20px rgba(255,121,0,0.4); }
+.am-start:disabled { opacity: 0.6; cursor: not-allowed; }
+.am-start.loading { background: rgba(255,121,0,0.3); }
+
+.am-spinner {
+  width: 14px; height: 14px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  display: inline-block;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }

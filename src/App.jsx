@@ -4,6 +4,7 @@ import Navbar from './components/ui/Navbar';
 import HUD from './components/ui/HUD';
 import MarketplacePanel from './components/marketplace/MarketplacePanel';
 import ToastContainer from './components/ui/Toast';
+import ActivityFeed from './components/ui/ActivityFeed';
 import { useStore } from './store';
 import { CAMPUS_BUILDINGS } from './data/buildings';
 import './App.css';
@@ -102,7 +103,7 @@ function PinEditorPanel({ buildings, selectedId, onSelectId, onUpdate, onClose }
 
 // ── App Root ────────────────────────────────────────────────────────────────
 export default function App() {
-  const { selectedBuilding } = useStore();
+  const { selectedBuilding, activityOpen, setActivityOpen } = useStore();
   const [editMode, setEditMode] = useState(false);
   const [editSelectedId, setEditSelectedId] = useState(CAMPUS_BUILDINGS[0].id);
   const [buildings, setBuildings] = useState(
@@ -185,6 +186,9 @@ export default function App() {
 
       {/* Toast notifications */}
       <ToastContainer />
+
+      {/* Activity Feed slide-in panel */}
+      <ActivityFeed open={activityOpen} onClose={() => setActivityOpen(false)} />
     </div>
   );
 }

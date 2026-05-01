@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, Menu, X, Wallet, ChevronDown, Layers } from 'lucide-react';
+import { Search, X, Wallet, ChevronDown, Layers, Activity } from 'lucide-react';
 import { useStore } from '../../store';
 import { CAMPUS_BUILDINGS } from '../../data/buildings';
 import './Navbar.css';
@@ -13,6 +13,7 @@ export default function Navbar() {
     filterCategory, setFilterCategory,
     setSelectedBuilding,
     isGanache,
+    activityFeed, activityOpen, setActivityOpen,
   } = useStore();
 
   const [searchOpen, setSearchOpen] = useState(false);
@@ -87,6 +88,18 @@ export default function Navbar() {
           </div>
         )}
       </div>
+
+      {/* Activity Feed button */}
+      <button
+        className="navbar-activity-btn"
+        onClick={() => setActivityOpen(!activityOpen)}
+        title="Activity Feed"
+      >
+        <Activity size={16} />
+        {activityFeed.length > 0 && (
+          <span className="activity-count">{activityFeed.length}</span>
+        )}
+      </button>
 
       {/* Wallet */}
       <div className="navbar-wallet">

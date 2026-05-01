@@ -1,0 +1,92 @@
+.auction-card {
+  background: linear-gradient(160deg, rgba(15,18,30,0.95), rgba(10,12,22,0.98));
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 14px;
+  overflow: hidden;
+  transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+  position: relative;
+}
+.auction-card:hover {
+  transform: translateY(-3px);
+  border-color: rgba(255,184,0,0.4);
+  box-shadow: 0 8px 30px rgba(255,184,0,0.15);
+}
+.auction-card.urgent {
+  border-color: rgba(255,79,106,0.5);
+  animation: urgentPulse 1.5s ease-in-out infinite;
+}
+@keyframes urgentPulse {
+  0%, 100% { box-shadow: 0 0 20px rgba(255,79,106,0.1); }
+  50%       { box-shadow: 0 0 30px rgba(255,79,106,0.3); }
+}
+.auction-card.ended { opacity: 0.6; pointer-events: none; }
+
+.ac-art { position: relative; aspect-ratio: 1; background: rgba(0,0,0,0.3); overflow: visible; }
+.ac-img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.ac-rarity-badge {
+  position: absolute; top: 8px; left: 8px;
+  font-size: 9px; font-weight: 800; text-transform: uppercase;
+  border: 1px solid currentColor; border-radius: 5px; padding: 2px 6px;
+  background: rgba(0,0,0,0.7); backdrop-filter: blur(4px);
+}
+.ac-countdown {
+  position: absolute; bottom: 8px; right: 8px;
+  display: flex; align-items: center; gap: 4px;
+  font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+  color: #00C896; background: rgba(0,0,0,0.8);
+  border: 1px solid rgba(0,200,150,0.35); border-radius: 6px;
+  padding: 3px 7px; backdrop-filter: blur(4px);
+}
+.ac-countdown.urgent { color: #FF4F6A; border-color: rgba(255,79,106,0.4); animation: timerPulse 0.8s ease infinite; }
+.ac-countdown.ended  { color: #6B7A99; border-color: rgba(107,122,153,0.3); }
+@keyframes timerPulse { 0%,100% { opacity: 1; } 50% { opacity: 0.6; } }
+
+.ac-ended-overlay {
+  position: absolute; inset: 0; background: rgba(0,0,0,0.65);
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: 6px; color: #6B7A99; font-size: 12px; font-weight: 700;
+}
+
+.ac-info { padding: 12px; }
+.ac-token-id { font-size: 10px; color: #555; font-family: var(--font-mono); margin-bottom: 2px; }
+.ac-name     { font-size: 12px; font-weight: 700; color: #e8eeff; margin-bottom: 8px; line-height: 1.3; }
+
+.ac-stats { display: flex; gap: 6px; margin-bottom: 6px; flex-wrap: wrap; }
+.ac-stat  { display: flex; align-items: center; gap: 3px; font-size: 10px; color: #6B7A99; }
+.ac-stat-label { color: #555; }
+.ac-stat-val   { font-family: var(--font-mono); font-size: 10px; font-weight: 700; color: #9ba8cc; }
+.ac-stat-val.highlight { color: #FFB800; }
+
+.ac-leader { font-size: 10px; color: #FFB800; margin-bottom: 4px; }
+.ac-seller { font-size: 10px; color: #555; margin-bottom: 10px; }
+
+.ac-actions { display: flex; gap: 6px; }
+
+.ac-bid-btn {
+  flex: 1; display: flex; align-items: center; justify-content: center; gap: 5px;
+  background: linear-gradient(135deg, #FFB800, #FF7900); border: none;
+  color: #000; border-radius: 8px; padding: 8px; font-size: 11px; font-weight: 800;
+  cursor: pointer; transition: all 0.2s;
+}
+.ac-bid-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 15px rgba(255,184,0,0.35); }
+
+.ac-end-btn {
+  flex: 1; display: flex; align-items: center; justify-content: center; gap: 5px;
+  background: rgba(0,200,150,0.12); border: 1px solid rgba(0,200,150,0.4);
+  color: #00C896; border-radius: 8px; padding: 8px; font-size: 11px; font-weight: 700;
+  cursor: pointer; transition: all 0.2s;
+}
+.ac-end-btn:hover:not(:disabled) { background: rgba(0,200,150,0.2); }
+.ac-end-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.ac-your-auction {
+  flex: 1; text-align: center; font-size: 10px; color: #555; padding: 8px;
+  background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); border-radius: 8px;
+}
+
+.ac-spinner {
+  width: 12px; height: 12px; border: 2px solid rgba(0,200,150,0.3);
+  border-top-color: #00C896; border-radius: 50%;
+  animation: acspin 0.7s linear infinite; display: inline-block;
+}
+@keyframes acspin { to { transform: rotate(360deg); } }

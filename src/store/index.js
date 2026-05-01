@@ -22,7 +22,6 @@ async function switchToGanache(provider) {
       { chainId: CHAIN_CONFIG.chainIdHex },
     ]);
   } catch (switchErr) {
-    // Chain not added yet — add it
     if (switchErr.code === 4902) {
       await provider.send('wallet_addEthereumChain', [
         {
@@ -39,6 +38,34 @@ async function switchToGanache(provider) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Activity helpers
+// ─────────────────────────────────────────────────────────────────────────────
+
+const ACTIVITY_ICONS = {
+  mint:          '🔨',
+  buy:           '🛒',
+  list:          '🏷️',
+  unlist:        '↩️',
+  transfer:      '📤',
+  bid:           '⚡',
+  auction_start: '⏳',
+  auction_win:   '🏆',
+};
+
+function makeActivity(type, nft, user, amount = null, extra = {}) {
+  return {
+    id:        Date.now() + Math.random(),
+    type,
+    icon:      ACTIVITY_ICONS[type] || '•',
+    nft:       { id: nft.id, name: nft.name, buildingId: nft.buildingId, rarity: nft.rarity },
+    user,
+    amount,    // ETH string or null
+    timestamp: Date.now(),
+    ...extra,
+  };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Store
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -47,7 +74,7 @@ export const useStore = create((set, get) => ({
   wallet: null,
   walletBalance: null,
   isConnecting: false,
-  isGanache: false,   // true when MetaMask is on Ganache + contract deployed
+  isGanache: false,
 
   connectWallet: async () => {
     set({ isConnecting: true });
@@ -57,7 +84,6 @@ export const useStore = create((set, get) => ({
       const { ethers } = await import('ethers');
       const provider = new ethers.BrowserProvider(window.ethereum);
 
-      // Try to switch MetaMask to Ganache if contract is deployed
       if (isContractDeployed()) {
         await switchToGanache(window.ethereum);
       }
@@ -68,7 +94,6 @@ export const useStore = create((set, get) => ({
       const balanceBN = await provider.getBalance(address);
       const balance   = ethers.formatEther(balanceBN);
 
-      // Detect if we're on Ganache chainId 1337
       const network   = await provider.getNetwork();
       const onGanache = Number(network.chainId) === CHAIN_CONFIG.chainId;
 
@@ -92,7 +117,6 @@ export const useStore = create((set, get) => ({
       );
     } catch (err) {
       console.warn('MetaMask connect failed, falling back to demo:', err.message);
-      // Demo fallback
       set({
         wallet: {
           address: '0xDemo1234567890AbCdEf1234567890AbCdEf12345',
@@ -112,7 +136,6 @@ export const useStore = create((set, get) => ({
 
   disconnectWallet: () => set({ wallet: null, walletBalance: null, isGanache: false }),
 
-  // Listen for MetaMask account / chain changes
   setupWalletListeners: () => {
     if (!window.ethereum) return;
     window.ethereum.on('accountsChanged', () => {
@@ -144,11 +167,132 @@ export const useStore = create((set, get) => ({
   // ── UI ───────────────────────────────────────────────────────────────────
   activePanel: null,
   setActivePanel: (panel) => set({ activePanel: panel }),
+  activityOpen: false,
+  setActivityOpen: (v) => set({ activityOpen: v }),
 
   // ── NFT state ─────────────────────────────────────────────────────────────
   nftCache: {},
-  ownedNFTs: [],      // NFTs owned by this wallet
-  listedNFTs: [],     // NFTs this wallet has listed for sale
+  ownedNFTs: [],
+  listedNFTs: [],
+
+  // ── Activity Feed ──────────────────────────────────────────────────────────
+  activityFeed: [],
+
+  addActivity: (event) => {
+    set(state => ({
+      activityFeed: [event, ...state.activityFeed].slice(0, 200), // keep latest 200
+    }));
+  },
+
+  // ── Auctions ──────────────────────────────────────────────────────────────
+  // Each auction: { id, nft, seller, minBid, highestBid, highestBidder,
+  //                 endsAt, active, bids: [{bidder, amount, timestamp}] }
+  auctions: [],
+
+  startAuction: async (nft, minBidEth, durationMs) => {
+    const { wallet } = get();
+    if (!wallet) throw new Error('Connect wallet first');
+
+    const auction = {
+      id:             `auction-${nft.id}-${Date.now()}`,
+      nft,
+      seller:         wallet.shortAddress,
+      sellerFull:     wallet.address,
+      minBid:         parseFloat(minBidEth),
+      highestBid:     0,
+      highestBidder:  null,
+      endsAt:         Date.now() + durationMs,
+      active:         true,
+      bids:           [],
+    };
+
+    // Remove from owned NFTs (it's locked in auction)
+    set(state => ({
+      auctions:  [auction, ...state.auctions],
+      ownedNFTs: state.ownedNFTs.filter(n => n.id !== nft.id),
+    }));
+
+    get().addActivity(makeActivity('auction_start', nft, wallet.shortAddress, minBidEth));
+    get().addNotification(`⏳ Auction started for "${nft.name}"!`, 'success');
+    return auction;
+  },
+
+  placeBid: async (auctionId, bidAmountEth) => {
+    const { wallet, auctions } = get();
+    if (!wallet) throw new Error('Connect wallet first');
+
+    const bidAmount = parseFloat(bidAmountEth);
+    const auction   = auctions.find(a => a.id === auctionId);
+    if (!auction) throw new Error('Auction not found');
+    if (!auction.active) throw new Error('Auction is not active');
+    if (Date.now() > auction.endsAt) throw new Error('Auction has ended');
+    if (bidAmount <= auction.highestBid) throw new Error(`Bid must be > ${auction.highestBid} ETH`);
+    if (bidAmount < auction.minBid) throw new Error(`Bid must be >= ${auction.minBid} ETH`);
+
+    const newBid = {
+      bidder:    wallet.shortAddress,
+      bidderFull: wallet.address,
+      amount:    bidAmount,
+      timestamp: Date.now(),
+    };
+
+    set(state => ({
+      auctions: state.auctions.map(a =>
+        a.id !== auctionId ? a : {
+          ...a,
+          highestBid:    bidAmount,
+          highestBidder: wallet.shortAddress,
+          bids:          [newBid, ...a.bids],
+        }
+      ),
+      // Deduct simulated balance in demo mode
+      walletBalance: wallet.isDemo
+        ? (parseFloat(state.walletBalance) - bidAmount).toFixed(4)
+        : state.walletBalance,
+    }));
+
+    get().addActivity(makeActivity('bid', auction.nft, wallet.shortAddress, bidAmountEth));
+    get().addNotification(`⚡ Bid of ${bidAmount} ETH placed on "${auction.nft.name}"!`, 'success');
+  },
+
+  endAuction: async (auctionId) => {
+    const { wallet, auctions } = get();
+    if (!wallet) throw new Error('Connect wallet first');
+
+    const auction = auctions.find(a => a.id === auctionId);
+    if (!auction) throw new Error('Auction not found');
+    if (!auction.active) throw new Error('Auction already ended');
+
+    const winner = auction.highestBidder;
+    const winnerNFT = {
+      ...auction.nft,
+      owner:    winner || auction.seller,
+      available: false,
+      listed:   false,
+    };
+
+    set(state => ({
+      auctions: state.auctions.map(a =>
+        a.id !== auctionId ? a : { ...a, active: false }
+      ),
+      // If current user won (or no bids, return to seller)
+      ownedNFTs: winner
+        ? (winner === wallet.shortAddress
+            ? [...state.ownedNFTs, winnerNFT]
+            : state.ownedNFTs)
+        : [...state.ownedNFTs, winnerNFT], // no bids — return to seller
+    }));
+
+    if (winner) {
+      get().addActivity(makeActivity('auction_win', auction.nft, winner, String(auction.highestBid)));
+      get().addNotification(
+        `🏆 Auction ended! "${auction.nft.name}" sold to ${winner} for ${auction.highestBid} ETH`,
+        'success'
+      );
+    } else {
+      get().addNotification(`↩️ Auction ended with no bids — "${auction.nft.name}" returned`, 'info');
+    }
+  },
 
   // ── Buy NFT ───────────────────────────────────────────────────────────────
   buyNFT: async (nft) => {
@@ -156,31 +300,23 @@ export const useStore = create((set, get) => ({
     if (!wallet) throw new Error('Connect wallet first');
 
     if (isGanache) {
-      // ── Real contract call ──────────────────────────────────────────────
       const { ethers } = await import('ethers');
       const contract = await getContract(wallet.signer);
       const priceWei = ethers.parseEther(nft.priceEth.toString());
-
-      // Get the on-chain tokenId from listing info (nft.onChainTokenId set when loaded)
-      const tokenId = nft.onChainTokenId;
+      const tokenId  = nft.onChainTokenId;
       if (!tokenId) throw new Error('NFT not found on-chain');
-
       const tx = await contract.buyNFT(tokenId, { value: priceWei });
       await tx.wait();
-
-      // Refresh wallet balance
       const balance = await wallet.provider.getBalance(wallet.address);
       set({ walletBalance: parseFloat(ethers.formatEther(balance)).toFixed(4) });
     }
 
-    // Update local state (works for both demo and real)
-    const address = wallet.address;
     set(state => ({
       ownedNFTs: [...state.ownedNFTs, {
         ...nft,
-        owner: wallet.shortAddress,
+        owner:     wallet.shortAddress,
         available: false,
-        listed: false,
+        listed:    false,
       }],
       nftCache: {
         ...state.nftCache,
@@ -191,6 +327,8 @@ export const useStore = create((set, get) => ({
         ),
       },
     }));
+
+    get().addActivity(makeActivity('buy', nft, wallet.shortAddress, nft.priceEth));
   },
 
   // ── List / Sell NFT ───────────────────────────────────────────────────────
@@ -200,18 +338,14 @@ export const useStore = create((set, get) => ({
 
     if (isGanache) {
       const { ethers } = await import('ethers');
-      const contract  = await getContract(wallet.signer);
-      const tokenId   = nft.onChainTokenId;
+      const contract      = await getContract(wallet.signer);
+      const tokenId       = nft.onChainTokenId;
       if (!tokenId) throw new Error('NFT not found on-chain');
-      const priceWei  = ethers.parseEther(priceEth.toString());
-
-      // Step 1: approve contract to move the NFT
+      const priceWei      = ethers.parseEther(priceEth.toString());
       const contractAddress = await contract.getAddress();
-      const approveTx = await contract.approve(contractAddress, tokenId);
+      const approveTx     = await contract.approve(contractAddress, tokenId);
       await approveTx.wait();
-
-      // Step 2: list
-      const listTx = await contract.listNFT(tokenId, priceWei);
+      const listTx        = await contract.listNFT(tokenId, priceWei);
       await listTx.wait();
     }
 
@@ -229,6 +363,8 @@ export const useStore = create((set, get) => ({
         ),
       },
     }));
+
+    get().addActivity(makeActivity('list', nft, wallet.shortAddress, priceEth));
   },
 
   // ── Unlist NFT ────────────────────────────────────────────────────────────
@@ -246,7 +382,7 @@ export const useStore = create((set, get) => ({
 
     set(state => ({
       listedNFTs: state.listedNFTs.filter(n => n.id !== nft.id),
-      ownedNFTs: [...state.ownedNFTs, { ...nft, listed: false, available: false }],
+      ownedNFTs:  [...state.ownedNFTs, { ...nft, listed: false, available: false }],
       nftCache: {
         ...state.nftCache,
         [nft.buildingId]: state.nftCache[nft.buildingId]?.map(n =>
@@ -254,6 +390,8 @@ export const useStore = create((set, get) => ({
         ),
       },
     }));
+
+    get().addActivity(makeActivity('unlist', nft, wallet.shortAddress));
   },
 
   // ── Transfer NFT ──────────────────────────────────────────────────────────
@@ -271,7 +409,6 @@ export const useStore = create((set, get) => ({
       await tx.wait();
     }
 
-    // Remove from owned
     set(state => ({
       ownedNFTs: state.ownedNFTs.filter(n => n.id !== nft.id),
       nftCache: {
@@ -281,6 +418,8 @@ export const useStore = create((set, get) => ({
         ),
       },
     }));
+
+    get().addActivity(makeActivity('transfer', nft, wallet.shortAddress, null, { to: toAddress }));
   },
 
   // ── Mint NFT from building collection ─────────────────────────────────────
@@ -291,46 +430,34 @@ export const useStore = create((set, get) => ({
     if (isGanache) {
       const { ethers } = await import('ethers');
       const contract = await getContract(wallet.signer);
-
-      // Build a simple on-chain metadata URI (data URI JSON)
       const metadata = JSON.stringify({
         name: nft.name,
         description: `CSUF Campus NFT — ${nft.buildingId}`,
         attributes: [
-          { trait_type: 'Rarity',    value: nft.rarity },
-          { trait_type: 'Edition',   value: nft.edition },
-          { trait_type: 'Effect',    value: nft.effect },
-          { trait_type: 'Background',value: nft.bgName },
+          { trait_type: 'Rarity',     value: nft.rarity },
+          { trait_type: 'Edition',    value: nft.edition },
+          { trait_type: 'Effect',     value: nft.effect },
+          { trait_type: 'Background', value: nft.bgName },
         ],
       });
-      const uri = `data:application/json;utf8,${encodeURIComponent(metadata)}`;
+      const uri          = `data:application/json;utf8,${encodeURIComponent(metadata)}`;
       const mintPriceWei = ethers.parseEther('0.01');
+      const tx           = await contract.mint(nft.buildingId, uri, { value: mintPriceWei });
+      const receipt      = await tx.wait();
 
-      const tx = await contract.mint(nft.buildingId, uri, { value: mintPriceWei });
-      const receipt = await tx.wait();
-
-      // Extract minted tokenId from event
       const mintEvent = receipt.logs
         .map(log => { try { return contract.interface.parseLog(log); } catch { return null; } })
         .find(e => e?.name === 'NFTMinted');
 
       const onChainTokenId = mintEvent ? Number(mintEvent.args.tokenId) : null;
-
-      // Refresh balance
       const balance = await wallet.provider.getBalance(wallet.address);
       set({ walletBalance: parseFloat(ethers.formatEther(balance)).toFixed(4) });
 
-      const mintedNFT = {
-        ...nft,
-        onChainTokenId,
-        owner: wallet.shortAddress,
-        available: false,
-        listed: false,
-      };
+      const mintedNFT = { ...nft, onChainTokenId, owner: wallet.shortAddress, available: false, listed: false };
       set(state => ({ ownedNFTs: [...state.ownedNFTs, mintedNFT] }));
+      get().addActivity(makeActivity('mint', mintedNFT, wallet.shortAddress, '0.01'));
       return mintedNFT;
     } else {
-      // Demo: just add to owned
       const mintedNFT = { ...nft, owner: wallet.shortAddress, available: false, listed: false };
       set(state => ({
         ownedNFTs: [...state.ownedNFTs, mintedNFT],
@@ -341,6 +468,7 @@ export const useStore = create((set, get) => ({
           ),
         },
       }));
+      get().addActivity(makeActivity('mint', mintedNFT, wallet.shortAddress, '0.01'));
       return mintedNFT;
     }
   },

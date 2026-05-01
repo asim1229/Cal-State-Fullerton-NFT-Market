@@ -38,8 +38,21 @@ contract CSUFCampusNFT is ERC721URIStorage, Ownable, ReentrancyGuard {
         bool active;
     }
 
+    struct Auction {
+        uint256 tokenId;
+        address seller;
+        uint256 minBid;         // in wei
+        uint256 highestBid;     // in wei
+        address highestBidder;
+        uint256 endsAt;         // unix timestamp
+        bool active;
+    }
+
     // tokenId => listing
     mapping(uint256 => NFTListing) public listings;
+
+    // tokenId => auction
+    mapping(uint256 => Auction) public auctions;
 
     // buildingId => collection info
     mapping(string => BuildingCollection) public collections;
@@ -57,6 +70,11 @@ contract CSUFCampusNFT is ERC721URIStorage, Ownable, ReentrancyGuard {
     event NFTUnlisted(uint256 indexed tokenId);
     event NFTSold(uint256 indexed tokenId, address indexed from, address indexed to, uint256 price);
     event FeesWithdrawn(address indexed to, uint256 amount);
+    // Auction events
+    event AuctionStarted(uint256 indexed tokenId, address indexed seller, uint256 minBid, uint256 endsAt);
+    event BidPlaced(uint256 indexed tokenId, address indexed bidder, uint256 amount);
+    event AuctionEnded(uint256 indexed tokenId, address indexed winner, uint256 amount);
+    event AuctionCancelled(uint256 indexed tokenId);
 
     constructor() ERC721("CSUF Campus NFT", "CSUFNFT") Ownable(msg.sender) {
         _tokenIdCounter = 0;
@@ -199,6 +217,99 @@ contract CSUFCampusNFT is ERC721URIStorage, Ownable, ReentrancyGuard {
 
     function getCollection(string calldata buildingId) external view returns (BuildingCollection memory) {
         return collections[buildingId];
+    }
+
+    function getAuction(uint256 tokenId) external view returns (Auction memory) {
+        return auctions[tokenId];
+    }
+
+    // ── Auction ────────────────────────────────────────────────────────────────
+
+    /**
+     * @dev Start a timed auction for an NFT you own.
+     * @param tokenId   Token to auction
+     * @param minBid    Minimum acceptable bid in wei
+     * @param duration  Auction length in seconds
+     */
+    function startAuction(uint256 tokenId, uint256 minBid, uint256 duration) external {
+        require(ownerOf(tokenId) == msg.sender, "Not owner");
+        require(!auctions[tokenId].active, "Auction already active");
+        require(!listings[tokenId].active, "Token currently listed");
+        require(minBid > 0, "Min bid must be > 0");
+        require(duration >= 1 hours && duration <= 30 days, "Invalid duration");
+
+        // Lock NFT in contract
+        transferFrom(msg.sender, address(this), tokenId);
+
+        uint256 endsAt = block.timestamp + duration;
+        auctions[tokenId] = Auction({
+            tokenId:       tokenId,
+            seller:        msg.sender,
+            minBid:        minBid,
+            highestBid:    0,
+            highestBidder: address(0),
+            endsAt:        endsAt,
+            active:        true
+        });
+
+        emit AuctionStarted(tokenId, msg.sender, minBid, endsAt);
+    }
+
+    /**
+     * @dev Place a bid on an active auction.
+     *      Send at least the current highest bid + 1 wei (or minBid if no bids).
+     *      Previous highest bidder is automatically refunded.
+     */
+    function placeBid(uint256 tokenId) external payable nonReentrant {
+        Auction storage auction = auctions[tokenId];
+        require(auction.active, "No active auction");
+        require(block.timestamp < auction.endsAt, "Auction ended");
+        require(msg.sender != auction.seller, "Seller cannot bid");
+
+        uint256 minRequired = auction.highestBid > 0
+            ? auction.highestBid + 1
+            : auction.minBid;
+        require(msg.value >= minRequired, "Bid too low");
+
+        // Refund previous highest bidder
+        if (auction.highestBidder != address(0)) {
+            payable(auction.highestBidder).transfer(auction.highestBid);
+        }
+
+        auction.highestBid    = msg.value;
+        auction.highestBidder = msg.sender;
+
+        emit BidPlaced(tokenId, msg.sender, msg.value);
+    }
+
+    /**
+     * @dev End an auction after its deadline.
+     *      Callable by anyone. Transfers NFT to winner; ETH to seller minus fee.
+     *      If no bids, NFT is returned to seller.
+     */
+    function endAuction(uint256 tokenId) external nonReentrant {
+        Auction storage auction = auctions[tokenId];
+        require(auction.active, "No active auction");
+        require(block.timestamp >= auction.endsAt, "Auction still running");
+
+        auction.active = false;
+
+        if (auction.highestBidder == address(0)) {
+            // No bids — return NFT to seller
+            _transfer(address(this), auction.seller, tokenId);
+            emit AuctionCancelled(tokenId);
+        } else {
+            // Transfer NFT to winner
+            _transfer(address(this), auction.highestBidder, tokenId);
+
+            // Pay seller minus fee
+            uint256 fee             = (auction.highestBid * PLATFORM_FEE_BPS) / MAX_BPS;
+            uint256 sellerProceeds  = auction.highestBid - fee;
+            accumulatedFees        += fee;
+
+            payable(auction.seller).transfer(sellerProceeds);
+            emit AuctionEnded(tokenId, auction.highestBidder, auction.highestBid);
+        }
     }
 
     // ── Finance ────────────────────────────────────────────────────────────────

@@ -1,13 +1,15 @@
 import { useState } from 'react';
-import { X, ShoppingCart, Tag, Package, Send, RotateCcw } from 'lucide-react';
+import { X, ShoppingCart, Tag, Package, Send, RotateCcw, Gavel } from 'lucide-react';
 import { useStore } from '../../store';
 import { generateNFTs } from '../../data/buildings';
 import NFTCard from './NFTCard';
 import SellModal from './SellModal';
 import TransferModal from './TransferModal';
+import AuctionModal from './AuctionModal';
+import AuctionCard from './AuctionCard';
 import './MarketplacePanel.css';
 
-const TABS = ['Collection', 'My NFTs', 'Listed'];
+const TABS = ['Collection', 'My NFTs', 'Listed', 'Auctions'];
 
 export default function MarketplacePanel() {
   const {
@@ -18,50 +20,46 @@ export default function MarketplacePanel() {
     nftCache,
     ownedNFTs,
     listedNFTs,
+    auctions,
     buyNFT,
     unlistNFT,
     addNotification,
     isGanache,
   } = useStore();
 
-  const [activeTab,    setActiveTab]    = useState('Collection');
-  const [sellTarget,   setSellTarget]   = useState(null);
+  const [activeTab,      setActiveTab]      = useState('Collection');
+  const [sellTarget,     setSellTarget]     = useState(null);
   const [transferTarget, setTransferTarget] = useState(null);
-  const [buying,       setBuying]       = useState(null);
-  const [unlisting,    setUnlisting]    = useState(null);
-  const [rarityFilter, setRarityFilter] = useState('All');
-  const [search,       setSearch]       = useState('');
+  const [auctionTarget,  setAuctionTarget]  = useState(null);
+  const [buying,         setBuying]         = useState(null);
+  const [unlisting,      setUnlisting]      = useState(null);
+  const [rarityFilter,   setRarityFilter]   = useState('All');
+  const [search,         setSearch]         = useState('');
 
   if (!selectedBuilding) return null;
 
-  const collectionNFTs = nftCache[selectedBuilding.id] || generateNFTs(selectedBuilding.id);
-  const myNFTs    = ownedNFTs.filter(n => n.buildingId === selectedBuilding.id);
-  const myListings = listedNFTs.filter(n => n.buildingId === selectedBuilding.id);
+  const collectionNFTs  = nftCache[selectedBuilding.id] || generateNFTs(selectedBuilding.id);
+  const myNFTs          = ownedNFTs.filter(n => n.buildingId === selectedBuilding.id);
+  const myListings      = listedNFTs.filter(n => n.buildingId === selectedBuilding.id);
+  const buildingAuctions = auctions.filter(a => a.nft.buildingId === selectedBuilding.id);
 
-  // Apply rarity + search filters
-  const applyFilters = (list) => {
-    return list.filter(n => {
+  const applyFilters = (list) =>
+    list.filter(n => {
       const matchRarity = rarityFilter === 'All' || n.rarity === rarityFilter;
-      const q = search.toLowerCase();
+      const q           = search.toLowerCase();
       const matchSearch = !q || n.name.toLowerCase().includes(q) || String(n.tokenId).includes(q);
       return matchRarity && matchSearch;
     });
-  };
 
   const tabData = {
     Collection: applyFilters(collectionNFTs),
     'My NFTs':  applyFilters(myNFTs),
     Listed:     applyFilters(myListings),
+    Auctions:   buildingAuctions, // auctions don't filter by rarity
   };
 
-  // ── Handlers ────────────────────────────────────────────────────────────
-
   const handleBuy = async (nft) => {
-    if (!wallet) {
-      addNotification('Connect your wallet to buy NFTs', 'warn');
-      connectWallet();
-      return;
-    }
+    if (!wallet) { addNotification('Connect your wallet to buy NFTs', 'warn'); connectWallet(); return; }
     setBuying(nft.id);
     try {
       await buyNFT(nft);
@@ -77,7 +75,7 @@ export default function MarketplacePanel() {
     setUnlisting(nft.id);
     try {
       await unlistNFT(nft);
-      addNotification(`↩️ "${nft.name}" unlisted — returned to your wallet`, 'success');
+      addNotification(`↩️ "${nft.name}" unlisted`, 'success');
     } catch (err) {
       addNotification(`Unlist failed: ${err.message}`, 'error');
     } finally {
@@ -85,7 +83,6 @@ export default function MarketplacePanel() {
     }
   };
 
-  // ── Stats ────────────────────────────────────────────────────────────────
   const prices = collectionNFTs.map(n => parseFloat(n.priceEth));
   const stats = {
     total:      collectionNFTs.length,
@@ -116,7 +113,6 @@ export default function MarketplacePanel() {
             </button>
           </div>
 
-          {/* Chain status badge */}
           <div className="chain-status">
             <span className={`chain-dot ${isGanache ? 'live' : 'demo'}`} />
             <span className="chain-label">
@@ -124,7 +120,6 @@ export default function MarketplacePanel() {
             </span>
           </div>
 
-          {/* Stats */}
           <div className="panel-stats">
             <div className="stat-item">
               <div className="stat-value">{stats.total}</div>
@@ -159,42 +154,60 @@ export default function MarketplacePanel() {
               {tab === 'Collection' && <ShoppingCart size={12} />}
               {tab === 'My NFTs'   && <Package size={12} />}
               {tab === 'Listed'    && <Tag size={12} />}
+              {tab === 'Auctions'  && <Gavel size={12} />}
               {tab}
-              {tab === 'My NFTs'  && myNFTs.length    > 0 && <span className="tab-badge">{myNFTs.length}</span>}
-              {tab === 'Listed'   && myListings.length > 0 && <span className="tab-badge">{myListings.length}</span>}
+              {tab === 'My NFTs'  && myNFTs.length         > 0 && <span className="tab-badge">{myNFTs.length}</span>}
+              {tab === 'Listed'   && myListings.length      > 0 && <span className="tab-badge">{myListings.length}</span>}
+              {tab === 'Auctions' && buildingAuctions.length > 0 && <span className="tab-badge auction-badge">{buildingAuctions.length}</span>}
             </button>
           ))}
         </div>
 
-        {/* Filters + Search */}
-        <div className="panel-filters">
-          <div className="rarity-filters">
-            {RARITIES.map(r => (
-              <button
-                key={r}
-                className={`rarity-pill ${rarityFilter === r ? 'active' : ''}`}
-                onClick={() => setRarityFilter(r)}
-              >
-                {r}
-              </button>
-            ))}
+        {/* Filters (not shown on Auctions tab) */}
+        {activeTab !== 'Auctions' && (
+          <div className="panel-filters">
+            <div className="rarity-filters">
+              {RARITIES.map(r => (
+                <button
+                  key={r}
+                  className={`rarity-pill ${rarityFilter === r ? 'active' : ''}`}
+                  onClick={() => setRarityFilter(r)}
+                >
+                  {r}
+                </button>
+              ))}
+            </div>
+            <input
+              className="nft-search"
+              placeholder="Search name or #..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+            />
           </div>
-          <input
-            className="nft-search"
-            placeholder="Search name or #..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-          />
-        </div>
+        )}
 
-        {/* NFT Grid */}
+        {/* Content */}
         <div className="panel-nfts">
-          {tabData[activeTab].length === 0 ? (
+          {activeTab === 'Auctions' ? (
+            buildingAuctions.length === 0 ? (
+              <div className="panel-empty">
+                <Gavel size={32} opacity={0.3} />
+                <p>No active auctions for this building</p>
+                <button className="empty-cta" onClick={() => setActiveTab('My NFTs')}>
+                  Auction your NFTs
+                </button>
+              </div>
+            ) : (
+              buildingAuctions.map(auction => (
+                <AuctionCard key={auction.id} auction={auction} />
+              ))
+            )
+          ) : tabData[activeTab].length === 0 ? (
             <div className="panel-empty">
               <Package size={32} opacity={0.3} />
               <p>
-                {activeTab === 'My NFTs'  ? 'No NFTs owned yet'   :
-                 activeTab === 'Listed'   ? 'No active listings'   :
+                {activeTab === 'My NFTs' ? 'No NFTs owned yet' :
+                 activeTab === 'Listed'  ? 'No active listings'  :
                  'No NFTs match filter'}
               </p>
               {activeTab === 'My NFTs' && (
@@ -210,31 +223,22 @@ export default function MarketplacePanel() {
                 nft={nft}
                 showSell={activeTab === 'My NFTs'}
                 showUnlist={activeTab === 'Listed'}
+                showAuction={activeTab === 'My NFTs'}
                 isBuying={buying === nft.id}
                 onBuy={() => handleBuy(nft)}
                 onSell={() => setSellTarget(nft)}
                 onTransfer={() => setTransferTarget(nft)}
                 onUnlist={() => handleUnlist(nft)}
+                onAuction={() => setAuctionTarget(nft)}
               />
             ))
           )}
         </div>
       </div>
 
-      {/* Modals */}
-      {sellTarget && (
-        <SellModal
-          nft={sellTarget}
-          onClose={() => setSellTarget(null)}
-        />
-      )}
-
-      {transferTarget && (
-        <TransferModal
-          nft={transferTarget}
-          onClose={() => setTransferTarget(null)}
-        />
-      )}
+      {sellTarget     && <SellModal nft={sellTarget} onClose={() => setSellTarget(null)} />}
+      {transferTarget && <TransferModal nft={transferTarget} onClose={() => setTransferTarget(null)} />}
+      {auctionTarget  && <AuctionModal nft={auctionTarget} onClose={() => setAuctionTarget(null)} />}
     </>
   );
 }

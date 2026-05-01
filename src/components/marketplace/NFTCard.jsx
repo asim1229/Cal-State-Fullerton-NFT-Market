@@ -1,14 +1,13 @@
 import { useState } from 'react';
-import { Heart, Eye, ShoppingCart, Tag, CheckCircle, Send } from 'lucide-react';
+import { Heart, Eye, ShoppingCart, Tag, CheckCircle, Send, Gavel } from 'lucide-react';
 import { RARITY_COLORS, drawF } from '../../data/buildings';
 import './NFTCard.css';
 
-// Encode SVG string as a safe data URI for use in <img> tags
 function svgToDataUri(svg) {
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
 }
 
-export default function NFTCard({ nft, showSell, isBuying, onBuy, onSell, onTransfer, onUnlist, showUnlist }) {
+export default function NFTCard({ nft, showSell, isBuying, onBuy, onSell, onTransfer, onUnlist, showUnlist, showAuction, onAuction }) {
   const [liked, setLiked] = useState(false);
 
   const rarityColor = RARITY_COLORS[nft.rarity] || '#6B7A99';
@@ -19,12 +18,7 @@ export default function NFTCard({ nft, showSell, isBuying, onBuy, onSell, onTran
     <div className={`nft-card ${!nft.available ? 'sold' : ''}`}>
       {/* SVG Art */}
       <div className="nft-art" style={{ '--rarity-color': rarityColor }}>
-        <img
-          src={artSrc}
-          alt={nft.name}
-          className="nft-svg-img"
-          draggable={false}
-        />
+        <img src={artSrc} alt={nft.name} className="nft-svg-img" draggable={false} />
         <div className="nft-rarity-badge" style={{ color: rarityColor, borderColor: rarityColor }}>
           {nft.rarity}
         </div>
@@ -46,10 +40,7 @@ export default function NFTCard({ nft, showSell, isBuying, onBuy, onSell, onTran
             <div className="nft-token-id">#{nft.tokenId} · {nft.edition}</div>
             <div className="nft-name">{nft.name}</div>
           </div>
-          <button
-            className={`nft-like ${liked ? 'liked' : ''}`}
-            onClick={() => setLiked(!liked)}
-          >
+          <button className={`nft-like ${liked ? 'liked' : ''}`} onClick={() => setLiked(!liked)}>
             <Heart size={13} fill={liked ? 'currentColor' : 'none'} />
             <span>{nft.likes + (liked ? 1 : 0)}</span>
           </button>
@@ -78,34 +69,32 @@ export default function NFTCard({ nft, showSell, isBuying, onBuy, onSell, onTran
 
           <div className="nft-actions">
             {showUnlist ? (
-              // Listed tab — show Unlist button
               <button className="btn-unlist" onClick={onUnlist}>
                 <Tag size={13} />
                 Unlist
               </button>
             ) : showSell ? (
-              // My NFTs tab — show Sell + Transfer
               <>
                 <button className="btn-sell" onClick={onSell}>
                   <Tag size={13} />
                   List
                 </button>
+                {showAuction && (
+                  <button className="btn-auction" onClick={onAuction} title="Start Auction">
+                    <Gavel size={13} />
+                  </button>
+                )}
                 <button className="btn-transfer" onClick={onTransfer}>
                   <Send size={13} />
                 </button>
               </>
             ) : (
-              // Collection tab — Buy button
               <button
                 className={`btn-buy ${isBuying ? 'loading' : ''} ${!nft.available ? 'disabled' : ''}`}
                 onClick={nft.available ? onBuy : undefined}
                 disabled={!nft.available || isBuying}
               >
-                {isBuying ? (
-                  <span className="spinner" />
-                ) : (
-                  <ShoppingCart size={13} />
-                )}
+                {isBuying ? <span className="spinner" /> : <ShoppingCart size={13} />}
                 {isBuying ? 'Buying...' : nft.available ? 'Buy' : 'Sold'}
               </button>
             )}

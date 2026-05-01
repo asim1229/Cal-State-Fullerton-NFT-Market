@@ -304,3 +304,31 @@
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
+
+/* Auction button — icon-only gavel */
+.btn-auction {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 8px;
+  background: rgba(255,184,0,0.1);
+  border: 1px solid rgba(255,184,0,0.35);
+  color: #FFB800;
+  border-radius: 7px;
+  cursor: pointer;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+.btn-auction:hover {
+  background: rgba(255,184,0,0.22);
+  border-color: #FFB800;
+  transform: translateY(-1px);
+}
+
+/* Auction tab badge */
+.tab-badge.auction-badge {
+  background: rgba(255,184,0,0.18);
+  color: #FFB800;
+  border-color: rgba(255,184,0,0.4);
+}
+
